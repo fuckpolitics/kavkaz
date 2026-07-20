@@ -5,7 +5,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { isAbsolute, join, resolve } from 'path';
 import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
 import { Image } from '../database/entities/image.entity';
@@ -21,7 +21,10 @@ export class FilesService {
     private readonly imagesRepository: Repository<Image>,
     configService: ConfigService,
   ) {
-    this.uploadDir = configService.get<string>('UPLOAD_DIR', './uploads');
+    this.uploadDir = (() => {
+      const dir = configService.get<string>('UPLOAD_DIR', './uploads');
+      return isAbsolute(dir) ? dir : resolve(process.cwd(), dir);
+    })();
     this.publicBaseUrl = configService.get<string>(
       'PUBLIC_BASE_URL',
       'http://localhost:3000',

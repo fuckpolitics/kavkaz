@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { isAbsolute, join, resolve } from 'path';
 import dataSource from './data-source';
 import { Booking } from './entities/booking.entity';
 import { Destination } from './entities/destination.entity';
@@ -23,8 +23,14 @@ import { UserRole } from './enums/user-role.enum';
 const PUBLIC_BASE_URL = (
   process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000'
 ).replace(/\/$/, '');
-const UPLOAD_DIR = process.env.UPLOAD_DIR ?? './uploads';
-const SEED_ASSETS_DIR = process.env.SEED_ASSETS_DIR ?? './seed/assets';
+const UPLOAD_DIR_ENV = process.env.UPLOAD_DIR ?? './uploads';
+const UPLOAD_DIR = isAbsolute(UPLOAD_DIR_ENV)
+  ? UPLOAD_DIR_ENV
+  : resolve(process.cwd(), UPLOAD_DIR_ENV);
+const SEED_ASSETS_DIR = resolve(
+  process.cwd(),
+  process.env.SEED_ASSETS_DIR ?? './seed/assets',
+);
 
 type SeedLocation = {
   name: string;
@@ -550,6 +556,7 @@ async function resolveSeedImage(
     const bundledStat = await fs.stat(bundled);
     if (bundledStat.size > 1000) {
       await fs.copyFile(bundled, filepath);
+      console.log(`    copy ${key} -> ${filepath}`);
       return { filename, size: bundledStat.size, mimeType: 'image/jpeg' };
     }
   } catch {
@@ -560,6 +567,7 @@ async function resolveSeedImage(
     await fs.access(filepath);
     const stat = await fs.stat(filepath);
     if (stat.size > 1000) {
+      console.log(`    reuse ${filepath}`);
       return { filename, size: stat.size, mimeType: 'image/jpeg' };
     }
   } catch {
@@ -574,6 +582,7 @@ async function resolveSeedImage(
   }
   const buf = Buffer.from(await res.arrayBuffer());
   await fs.writeFile(filepath, buf);
+  console.log(`    download ${key} -> ${filepath}`);
   return { filename, size: buf.length, mimeType: 'image/jpeg' };
 }
 
@@ -628,7 +637,9 @@ async function seed() {
   console.log('Clearing database...');
   await clearDatabase();
 
-  console.log('Loading images from seed/assets (or download fallback)...');
+  console.log('Loading images...');
+  console.log(`  UPLOAD_DIR=${UPLOAD_DIR}`);
+  console.log(`  SEED_ASSETS_DIR=${SEED_ASSETS_DIR}`);
   const imageMap = new Map<string, Image>();
   for (const [key, url] of Object.entries(IMAGE_URLS)) {
     process.stdout.write(`  ${key}... `);

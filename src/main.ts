@@ -1,7 +1,9 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
+import express from 'express';
+import { existsSync, mkdirSync } from 'fs';
+import { isAbsolute, resolve } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -61,10 +63,16 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const uploadDir = process.env.UPLOAD_DIR ?? './uploads';
-  app.useStaticAssets(join(process.cwd(), uploadDir), {
-    prefix: '/uploads/',
-  });
+  const uploadDirEnv = process.env.UPLOAD_DIR ?? './uploads';
+  const uploadPath = isAbsolute(uploadDirEnv)
+    ? uploadDirEnv
+    : resolve(process.cwd(), uploadDirEnv);
+  if (!existsSync(uploadPath)) {
+    mkdirSync(uploadPath, { recursive: true });
+  }
+  // Raw Express static — not affected by global prefix /api
+  app.use('/uploads', express.static(uploadPath));
+  console.log(`[uploads] serving ${uploadPath} at /uploads`);
 
   app.setGlobalPrefix('api');
 
