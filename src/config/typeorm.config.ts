@@ -5,9 +5,6 @@ import { entities } from '../database/entities';
 export const typeOrmConfig = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => {
-  const nodeEnv = configService.get<string>('NODE_ENV', 'development');
-  const isProduction = nodeEnv === 'production';
-
   return {
     type: 'postgres',
     host: configService.getOrThrow<string>('DB_HOST'),
@@ -20,8 +17,13 @@ export const typeOrmConfig = (
     logging: configService.get<string>('DB_LOGGING') === 'true',
     migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
     migrationsRun: configService.get<string>('DB_MIGRATIONS_RUN') === 'true',
-    ssl: isProduction
-      ? { rejectUnauthorized: configService.get('DB_SSL_REJECT_UNAUTHORIZED') !== 'false' }
-      : false,
+    // Docker Postgres has no TLS. Opt-in with DB_SSL=true for managed DBs.
+    ssl:
+      configService.get<string>('DB_SSL') === 'true'
+        ? {
+            rejectUnauthorized:
+              configService.get('DB_SSL_REJECT_UNAUTHORIZED') !== 'false',
+          }
+        : false,
   };
 };
