@@ -52,8 +52,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-        INTERNAL_API_URL: http://api:3000
+        NEXT_PUBLIC_API_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}/api
+        INTERNAL_API_URL: http://api:3000/api
     restart: unless-stopped
     depends_on:
       - api
@@ -61,8 +61,8 @@ services:
       NODE_ENV: production
       PORT: 3001
       HOSTNAME: 0.0.0.0
-      NEXT_PUBLIC_API_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-      INTERNAL_API_URL: http://api:3000
+      NEXT_PUBLIC_API_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}/api
+      INTERNAL_API_URL: http://api:3000/api
     expose:
       - '3001'
 

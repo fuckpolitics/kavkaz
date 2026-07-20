@@ -34,14 +34,15 @@ function getBaseUrl(): string {
   if (fromEnv) {
     return fromEnv;
   }
-  // Local / LAN fallback when env is not baked into the build.
+  // Same-origin gateway: Next pages at /, Nest under /api
   if (typeof window !== 'undefined') {
-    const { hostname, protocol } = window.location;
-    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      return `${protocol}//${hostname}:3000`;
-    }
+    return `${window.location.origin}/api`;
   }
-  return 'http://localhost:3000';
+  const internal = process.env.INTERNAL_API_URL?.replace(/\/$/, '');
+  if (internal) {
+    return internal.endsWith('/api') ? internal : `${internal}/api`;
+  }
+  return 'http://localhost:3000/api';
 }
 
 function buildQuery(

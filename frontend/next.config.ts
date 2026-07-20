@@ -29,6 +29,12 @@ const nextConfig = {
       {
         protocol: 'http',
         hostname: publicHost,
+        port: '8080',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'http',
+        hostname: publicHost,
         port: '3000',
         pathname: '/uploads/**',
       },
@@ -43,7 +49,7 @@ const nextConfig = {
     return [
       {
         source: '/uploads/:path*',
-        destination: `${apiInternal}/uploads/:path*`,
+        destination: `${apiInternal.replace(/\/api$/, '')}/uploads/:path*`,
       },
     ];
   },
