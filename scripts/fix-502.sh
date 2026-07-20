@@ -12,8 +12,9 @@ docker compose -p tmpapp --env-file .env.prod ps -a || true
 echo "==> last api logs"
 docker compose -p tmpapp --env-file .env.prod logs --tail=120 api || true
 
-echo "==> rebuild + restart all"
-docker compose -p tmpapp --env-file .env.prod up -d --build --force-recreate
+echo "==> rebuild api without cache (SSL fix must land in dist/)"
+docker compose -p tmpapp --env-file .env.prod build --no-cache api
+docker compose -p tmpapp --env-file .env.prod up -d --force-recreate api web gateway
 
 echo "==> wait for api"
 for i in $(seq 1 60); do

@@ -42,6 +42,7 @@ services:
       DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
       DB_LOGGING: ${DB_LOGGING:-false}
       DB_MIGRATIONS_RUN: ${DB_MIGRATIONS_RUN:-false}
+      DB_SSL: ${DB_SSL:-false}
     volumes:
       - tmpapp_uploads:/app/uploads
     expose:
