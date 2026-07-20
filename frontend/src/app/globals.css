@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f2efe8;
+  --surface: #ffffff;
+  --ink: #0b1013;
+  --forest: #1e3d2f;
+  --forest-light: #2a5240;
+  --primary: #1e3d2f;
+  --primary-light: #2a5240;
+  --accent: #d9c8a3;
+  --text-primary: #101411;
+  --text-secondary: #667069;
+  --border: #dedbd3;
+  --danger: #b83a3a;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--text-primary);
+  background: var(--background);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+}
+
+.font-script {
+  font-family: var(--font-caveat), Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.pb-mobile-nav {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .pb-mobile-nav {
+    padding-bottom: 0;
+  }
+}
+
+@keyframes kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.8s ease-out both;
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 200, 163, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(217, 200, 163, 0);
+  }
+}
+
+.hero-kenburns {
+  animation: kenburns 18s ease-out forwards;
+}
+
+.marker-pulse {
+  animation: soft-pulse 2.4s ease-out infinite;
+}
+
+/* Homepage section atmospheres */
+.section-topo {
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(217, 200, 163, 0.14), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(42, 82, 64, 0.45), transparent 50%),
+    linear-gradient(180deg, #0b1013 0%, #121a16 100%);
+}
+
+.section-mist {
+  background-color: #e8e4db;
+  background-image:
+    radial-gradient(ellipse 70% 60% at 0% 40%, rgba(30, 61, 47, 0.08), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 0%, rgba(217, 200, 163, 0.35), transparent 50%);
+}
+
+.section-forest-glow {
+  background-color: var(--forest);
+  background-image:
+    radial-gradient(ellipse 90% 70% at 50% -20%, rgba(217, 200, 163, 0.22), transparent 55%),
+    linear-gradient(165deg, #1e3d2f 0%, #152a21 55%, #0f1c16 100%);
+}
+
+.section-grain::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.quiz-option {
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.quiz-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+.receipt-panel {
+  background:
+    linear-gradient(180deg, #fffdf8 0%, #f7f2e8 100%);
+  box-shadow: 0 16px 40px rgba(11, 16, 19, 0.08);
+}
+
+.film-tile {
+  position: relative;
+  overflow: hidden;
+}
+
+.film-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 35%, rgba(11, 16, 19, 0.75) 100%);
+}
+
+.compare-us {
+  background: linear-gradient(180deg, rgba(30, 61, 47, 0.08) 0%, rgba(30, 61, 47, 0.02) 100%);
+  box-shadow: inset 0 0 0 1px rgba(30, 61, 47, 0.2);
+}
+
+@keyframes progress-shine {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+.progress-accent {
+  background: linear-gradient(90deg, #d9c8a3, #f0e6d0, #d9c8a3);
+  background-size: 200% 100%;
+  animation: progress-shine 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-kenburns,
+  .marker-pulse,
+  .animate-fade-up,
+  .progress-accent {
+    animation: none !important;
+  }
+
+  .quiz-option:hover {
+    transform: none;
+  }
+
+  .reveal-motion {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

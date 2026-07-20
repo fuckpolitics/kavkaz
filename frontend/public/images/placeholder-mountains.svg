@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1E3D2F"/><stop offset="100%" stop-color="#0B1D13"/></linearGradient></defs>
+  <rect width="1600" height="1000" fill="url(#g)"/>
+  <polygon points="0,700 300,400 600,650 900,350 1200,600 1600,300 1600,1000 0,1000" fill="#163d2b"/>
+  <polygon points="0,800 250,550 500,750 800,480 1100,720 1400,500 1600,650 1600,1000 0,1000" fill="#0B1D13" opacity="0.85"/>
+  <text x="80" y="120" fill="#D9C6A3" font-family="Arial" font-size="48" font-weight="700">KAVKAZ</text>
+</svg>

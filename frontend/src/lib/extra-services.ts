@@ -1,0 +1,33 @@
+import type { ExtraServiceDto } from '@/types/extra-service';
+import type { LocationShortDto } from '@/types/location';
+
+/** Global extras + those linked to selected locations / their parents / children. */
+export function filterExtrasForLocations(
+  extras: ExtraServiceDto[],
+  selectedIds: Set<string>,
+  locations: LocationShortDto[],
+): ExtraServiceDto[] {
+  if (selectedIds.size === 0) {
+    return extras.filter((extra) => !extra.locationId);
+  }
+
+  return extras.filter((extra) => {
+    if (!extra.locationId) return true;
+    if (selectedIds.has(extra.locationId)) return true;
+
+    const linked = locations.find((loc) => loc.id === extra.locationId);
+    if (!linked) return false;
+
+    // Linked to a top-level location: show when parent or any child is selected.
+    if (!linked.parentId) {
+      return locations.some(
+        (loc) =>
+          (loc.id === linked.id || loc.parentId === linked.id) &&
+          selectedIds.has(loc.id),
+      );
+    }
+
+    // Linked to a sublocation: show when that sub is selected.
+    return selectedIds.has(linked.id);
+  });
+}

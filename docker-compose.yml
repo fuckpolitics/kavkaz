@@ -1,0 +1,82 @@
+name: tmpapp
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-kavkaz}
+      POSTGRES_USER: ${DB_USERNAME:-kavkaz}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+    volumes:
+      - tmpapp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      UPLOAD_DIR: /app/uploads
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-kavkaz}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE:-kavkaz}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
+      DB_LOGGING: ${DB_LOGGING:-false}
+      DB_MIGRATIONS_RUN: ${DB_MIGRATIONS_RUN:-false}
+    volumes:
+      - tmpapp_uploads:/app/uploads
+    expose:
+      - '3000'
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+        INTERNAL_API_URL: http://api:3000
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      INTERNAL_API_URL: http://api:3000
+    expose:
+      - '3001'
+
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+    ports:
+      - '8080:80'
+    volumes:
+      - ./deploy/nginx.tmpapp.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  tmpapp_pgdata:
+  tmpapp_uploads:

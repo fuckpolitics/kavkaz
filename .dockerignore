@@ -1,0 +1,13 @@
+node_modules
+frontend/node_modules
+frontend/.next
+dist
+.git
+uploads
+*.log
+.env
+.env.local
+frontend/.env.local
+coverage
+md
+FRONTEND_PLAN.md
