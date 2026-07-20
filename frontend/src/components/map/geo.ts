@@ -44,10 +44,10 @@ export function frameViewBox(
   }
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
-  let minX = Math.min(...xs) - pad;
-  let maxX = Math.max(...xs) + pad;
-  let minY = Math.min(...ys) - pad;
-  let maxY = Math.max(...ys) + pad;
+  const minX = Math.min(...xs) - pad;
+  const maxX = Math.max(...xs) + pad;
+  const minY = Math.min(...ys) - pad;
+  const maxY = Math.max(...ys) + pad;
 
   let w = Math.max(maxX - minX, minSize);
   let h = Math.max(maxY - minY, minSize * (MAP_SVG_H / MAP_SVG_W));

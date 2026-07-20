@@ -451,7 +451,7 @@ export function GeoMap({
       left: `${Math.min(Math.max(left, 14), 86)}%`,
       top: `${Math.min(Math.max(top, 16), 88)}%`,
     };
-  }, [hoverMarker, markers, level]);
+  }, [hoverMarker]);
 
   const tourMarkers = markers.filter((m) => m.kind !== 'base');
   const linkPoints = tourMarkers.map((m) => `${m.pos.x},${m.pos.y}`).join(' ');

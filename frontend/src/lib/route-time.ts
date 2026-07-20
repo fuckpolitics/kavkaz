@@ -1,9 +1,6 @@
 import type { LocationShortDto } from '@/types/location';
 
-export function getParentId(
-  location: LocationShortDto,
-  all: LocationShortDto[],
-): string {
+export function getParentId(location: LocationShortDto): string {
   if (!location.parentId) return location.id;
   return location.parentId;
 }
@@ -20,7 +17,7 @@ export function orderedParentIds(
   for (const id of selectedIds) {
     const loc = byId.get(id);
     if (!loc) continue;
-    const parentId = getParentId(loc, locations);
+    const parentId = getParentId(loc);
     if (seen.has(parentId)) continue;
     seen.add(parentId);
     ordered.push(parentId);
