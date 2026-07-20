@@ -9,5 +9,4 @@ uploads
 .env.local
 frontend/.env.local
 coverage
-md
 FRONTEND_PLAN.md

@@ -24,6 +24,7 @@ const PUBLIC_BASE_URL = (
   process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000'
 ).replace(/\/$/, '');
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? './uploads';
+const SEED_ASSETS_DIR = process.env.SEED_ASSETS_DIR ?? './seed/assets';
 
 type SeedLocation = {
   name: string;
@@ -103,7 +104,7 @@ const LOCATIONS: SeedLocation[] = [
       'Плато Бермамыт',
       'Скалы Монахи',
       'Амфитеатр',
-      'смотровая на Эльбрус',
+      'смотровая на Эльбрус и Большой Кавказский хребет',
     ],
   },
   {
@@ -117,7 +118,7 @@ const LOCATIONS: SeedLocation[] = [
       'Плато Бермамыт',
       'Скалы Монахи',
       'Амфитеатр',
-      'смотровая площадка на Эльбрус',
+      'смотровая площадка на Эльбрус и Большой Кавказский хребет',
     ],
   },
   {
@@ -131,12 +132,12 @@ const LOCATIONS: SeedLocation[] = [
       'Плато Бермамыт',
       'Скалы Монахи',
       'Амфитеатр',
-      'смотровая площадка на Эльбрус',
+      'смотровая площадка на Эльбрус и Большой Кавказский хребет',
     ],
   },
   {
     name: 'Домбай',
-    price: 17900,
+    price: null,
     destinationSlug: 'karachay-cherkessia',
     lat: 43.29,
     lng: 41.602,
@@ -153,13 +154,13 @@ const LOCATIONS: SeedLocation[] = [
   },
   {
     name: 'Эльбрус',
-    price: 24900,
+    price: null,
     destinationSlug: 'kabardino-balkaria',
     lat: 43.355,
     lng: 42.439,
     imageQuery: 'elbrus-peak',
     subs: [
-      'Озеро Гижгит',
+      'Озеро Гижгит (Былымское)',
       'река Адыр-Су',
       'Поляна Нарзанов',
       'Поляна Азау',
@@ -175,7 +176,7 @@ const LOCATIONS: SeedLocation[] = [
     lng: 43.25,
     imageQuery: 'chegem-waterfall',
     subs: [
-      'Озеро Гижгит',
+      'Озеро Гижгит (Былымское)',
       'перевал Актопрак',
       'Парадром',
       'Эльтюбё',
@@ -202,7 +203,7 @@ const LOCATIONS: SeedLocation[] = [
   },
   {
     name: 'Уллу-Тау',
-    price: 8900,
+    price: null,
     destinationSlug: 'kabardino-balkaria',
     lat: 43.24,
     lng: 42.68,
@@ -226,14 +227,14 @@ const LOCATIONS: SeedLocation[] = [
   },
   {
     name: 'Северная Осетия',
-    price: 12900,
+    price: null,
     destinationSlug: 'north-ossetia',
     lat: 42.92,
     lng: 44.55,
     imageQuery: 'ossetia-canyon',
     subs: [
       'Куртатинское ущелье',
-      'Аланский монастырь',
+      'Аланский Свято-Успенский мужской монастырь',
       'Даргавс',
       'Кармадонское ущелье',
     ],
@@ -262,9 +263,9 @@ const LOCATIONS: SeedLocation[] = [
     lng: 45.698,
     imageQuery: 'grozny-mosque',
     subs: [
-      'Мечеть Гордость мусульман',
-      'Мечеть Сердце матери',
-      'Мечеть Сердце Чечни',
+      'Мечеть «Гордость мусульман» (Шали)',
+      'мечеть «Сердце матери» (Аргун)',
+      'мечеть «Сердце Чечни» (Грозный)',
       'экскурсия по столице',
       'смотровая площадка',
       'лестница в небо',
@@ -272,7 +273,7 @@ const LOCATIONS: SeedLocation[] = [
   },
   {
     name: 'Озеро Хурла-Кёль',
-    price: 6500,
+    price: null,
     destinationSlug: 'karachay-cherkessia',
     lat: 43.52,
     lng: 41.85,
@@ -318,7 +319,7 @@ const LOCATIONS: SeedLocation[] = [
   },
   {
     name: 'Медовые водопады',
-    price: 4500,
+    price: null,
     destinationSlug: 'karachay-cherkessia',
     lat: 43.885,
     lng: 42.587,
@@ -328,7 +329,7 @@ const LOCATIONS: SeedLocation[] = [
       'Чайный домик',
       'зиплайн',
       'качели над пропастью',
-      'комплекс Медовые водопады',
+      'комплекс «Медовые водопады»',
     ],
   },
   {
@@ -536,13 +537,24 @@ const IMAGE_URLS: Record<string, string> = {
   hero: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2000&q=85',
 };
 
-async function downloadImage(
+async function resolveSeedImage(
   key: string,
   url: string,
 ): Promise<{ filename: string; size: number; mimeType: string }> {
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
   const filename = `${createHash('md5').update(key).digest('hex')}.jpg`;
   const filepath = join(UPLOAD_DIR, filename);
+  const bundled = join(SEED_ASSETS_DIR, `${key}.jpg`);
+
+  try {
+    const bundledStat = await fs.stat(bundled);
+    if (bundledStat.size > 1000) {
+      await fs.copyFile(bundled, filepath);
+      return { filename, size: bundledStat.size, mimeType: 'image/jpeg' };
+    }
+  } catch {
+    // fall through to cache / download
+  }
 
   try {
     await fs.access(filepath);
@@ -570,7 +582,7 @@ async function saveImageEntity(
   url: string,
 ): Promise<Image> {
   const repo = dataSource.getRepository(Image);
-  const file = await downloadImage(key, url);
+  const file = await resolveSeedImage(key, url);
   const image = repo.create({
     id: randomUUID(),
     filename: file.filename,
@@ -616,7 +628,7 @@ async function seed() {
   console.log('Clearing database...');
   await clearDatabase();
 
-  console.log('Downloading images...');
+  console.log('Loading images from seed/assets (or download fallback)...');
   const imageMap = new Map<string, Image>();
   for (const [key, url] of Object.entries(IMAGE_URLS)) {
     process.stdout.write(`  ${key}... `);
@@ -665,7 +677,14 @@ async function seed() {
         destinationId: dest.id,
         parentId: null,
         name: loc.name,
-        description: `Выезд из Кисловодска. Подлокации: ${loc.subs.join(', ')}. Входные билеты, канатные дороги и эко-сбор оплачиваются отдельно.`,
+        description: [
+          `Выезд из Кисловодска. Группа до 8 человек.`,
+          loc.price != null
+            ? `Цена за место в группе: ${loc.price} ₽.`
+            : `Цена по запросу.`,
+          `Подлокации: ${loc.subs.join(', ')}.`,
+          `Входные билеты, канатные дороги и эко-сбор оплачиваются отдельно.`,
+        ].join(' '),
         latitude: loc.lat,
         longitude: loc.lng,
         address: loc.name,
@@ -739,23 +758,15 @@ async function seed() {
     const dest = destMap.get(loc.destinationSlug)!;
     const location = locMap.get(loc.name)!;
     const cover = imageMap.get(loc.imageQuery);
-    const durationDays =
-      loc.price! >= 15000 ? 3 : loc.price! >= 5000 ? 2 : 1;
-    const tourPrice =
-      durationDays === 1
-        ? loc.price!
-        : durationDays === 2
-          ? loc.price! * 2 + 5000
-          : loc.price! * 3 + 8000;
+    // Day trip from Kislovodsk: price = seat in group (up to 8), from locations_prices.md
+    const durationDays = 1;
+    const tourPrice = loc.price!;
 
     const tour = await tourRepo.save(
       tourRepo.create({
         destinationId: dest.id,
-        title:
-          durationDays === 1
-            ? `${loc.name} — день`
-            : `${loc.name} за ${durationDays} дня`,
-        description: `Авторский маршрут: ${loc.name}. Включает: ${loc.subs.slice(0, 5).join(', ')}. Выезд из Кисловодска, группа до 8 человек.`,
+        title: `${loc.name} — день`,
+        description: `Авторский маршрут: ${loc.name}. Включает: ${loc.subs.slice(0, 5).join(', ')}. Выезд из Кисловодска, группа до 8 человек. Цена за место: ${tourPrice} ₽.`,
         price: tourPrice.toFixed(2),
         durationDays,
         coverImageId: cover?.id ?? null,
@@ -764,15 +775,12 @@ async function seed() {
     );
 
     for (let day = 1; day <= durationDays; day++) {
-      const chunk = loc.subs.slice(
-        Math.floor(((day - 1) * loc.subs.length) / durationDays),
-        Math.floor((day * loc.subs.length) / durationDays) || undefined,
-      );
+      const chunk = loc.subs;
       const tourDay = await dayRepo.save(
         dayRepo.create({
           tourId: tour.id,
           dayNumber: day,
-          title: day === 1 ? `Знакомство с ${loc.name}` : `День ${day}`,
+          title: `Знакомство с ${loc.name}`,
           description:
             chunk.length > 0
               ? `Программа дня: ${chunk.join(', ')}.`
