@@ -34,7 +34,7 @@ export class VerifyOtpDto {
   @Matches(/^\+?[0-9]{10,15}$/)
   phone?: string;
 
-  @ApiProperty({ example: '0000' })
+  @ApiProperty({ example: '4821' })
   @IsString()
   @MinLength(4)
   @MaxLength(8)
@@ -54,8 +54,10 @@ export class RequestOtpResponseDto {
   @ApiProperty({ enum: ['email', 'phone'] })
   channel: 'email' | 'phone';
 
-  @ApiProperty({ description: 'Always 0000 in test mode' })
-  debugCode: string;
+  @ApiPropertyOptional({
+    description: 'Only present in OTP test mode (no SMTP / OTP_TEST_MODE=true)',
+  })
+  debugCode?: string;
 
   @ApiProperty()
   message: string;

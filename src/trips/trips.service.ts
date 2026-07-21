@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { toMoneyString, toNumber } from '../common/utils/money.util';
+import { estimateTripTotal } from '../common/utils/pricing.util';
 import { ExtraService } from '../database/entities/extra-service.entity';
 import { Location } from '../database/entities/location.entity';
 import { TripStatus } from '../database/enums/trip-status.enum';
@@ -213,12 +214,6 @@ export class TripsService {
       throw new BadRequestException('Select at least one location or rest day');
     }
 
-    if (dayPlan.length < uniqueLocationIds.length) {
-      throw new BadRequestException(
-        'Number of days cannot be less than number of locations',
-      );
-    }
-
     if (uniqueLocationIds.length > 0) {
       const locations = await this.locationsRepository.find({
         where: { id: In(uniqueLocationIds) },
@@ -226,6 +221,14 @@ export class TripsService {
       if (locations.length !== uniqueLocationIds.length) {
         throw new NotFoundException('One or more locations not found');
       }
+    }
+
+    // Legacy flat payload: one location per day. Structured `days` can list
+    // several points inside a single day.
+    if (!dto.days?.length && dayPlan.length < uniqueLocationIds.length) {
+      throw new BadRequestException(
+        'Number of days cannot be less than number of locations',
+      );
     }
 
     const trip = this.tripsRepository.createTrip({
@@ -542,17 +545,47 @@ export class TripsService {
     if (!trip) {
       return;
     }
-    let base = 0;
-    if (trip.sourceTourId && trip.sourceTour) {
-      base = toNumber(trip.sourceTour.price);
-    } else if (trip.sourceTourId) {
-      const tour = await this.toursService.requireById(trip.sourceTourId);
-      base = toNumber(tour.price);
+
+    const locationIds = new Set<string>();
+    for (const day of trip.days ?? []) {
+      for (const item of day.locations ?? []) {
+        const loc = item.location;
+        if (!loc) continue;
+        locationIds.add(loc.id);
+        if (loc.parentId) locationIds.add(loc.parentId);
+      }
     }
-    const extras = (trip.extraServices ?? []).reduce((sum, item) => {
-      return sum + toNumber(item.price) * item.quantity;
-    }, 0);
-    trip.estimatedPrice = toMoneyString(base + extras);
+
+    const locationById = new Map<string, Location>();
+    if (locationIds.size > 0) {
+      const locs = await this.locationsRepository.find({
+        where: { id: In([...locationIds]) },
+      });
+      for (const loc of locs) {
+        locationById.set(loc.id, loc);
+      }
+    }
+
+    let tourSeatPrice = trip.sourceTour?.price ?? null;
+    if (trip.sourceTourId && tourSeatPrice == null) {
+      const tour = await this.toursService.requireById(trip.sourceTourId);
+      tourSeatPrice = tour.price;
+    }
+
+    const estimate = estimateTripTotal({
+      adults: trip.adults,
+      children: trip.children,
+      useTourBase: Boolean(trip.sourceTourId),
+      tourSeatPrice,
+      days: trip.days ?? [],
+      locationById,
+      extras: (trip.extraServices ?? []).map((item) => ({
+        price: item.price,
+        quantity: item.quantity,
+      })),
+    });
+
+    trip.estimatedPrice = toMoneyString(estimate.total);
     await this.tripsRepository.saveTrip(trip);
   }
 

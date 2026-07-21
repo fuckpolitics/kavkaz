@@ -27,6 +27,7 @@ type FormState = {
   longitude: string;
   visitDurationMinutes: string;
   travelFromBaseMinutes: string;
+  price: string;
   images: ImageDto[];
 };
 
@@ -39,6 +40,7 @@ const emptyForm = (destinationId = ''): FormState => ({
   longitude: '42.4',
   visitDurationMinutes: '60',
   travelFromBaseMinutes: '',
+  price: '',
   images: [],
 });
 
@@ -121,6 +123,7 @@ export default function AdminLocationsPage() {
           full.travelFromBaseMinutes != null
             ? String(full.travelFromBaseMinutes)
             : '',
+        price: full.price != null ? String(full.price) : '',
         images: full.images ?? [],
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -148,6 +151,7 @@ export default function AdminLocationsPage() {
       travelFromBaseMinutes: form.travelFromBaseMinutes
         ? Number(form.travelFromBaseMinutes)
         : null,
+      price: form.price.trim() ? Number(form.price) : null,
       imageIds: form.images.map((image) => image.id),
     };
     try {
@@ -282,9 +286,22 @@ export default function AdminLocationsPage() {
             }
           />
         </div>
+        {!form.parentId ? (
+          <AppInput
+            label="Цена за место, ₽ (группа ≤8)"
+            type="number"
+            min={0}
+            value={form.price}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, price: e.target.value }))
+            }
+            placeholder="напр. 4200"
+          />
+        ) : null}
         <p className="text-xs text-text-secondary">
           Для локации задайте дорогу от базы. Для подлокаций важнее время на
           точке — в конструкторе день считается как дорога×2 + сумма визитов.
+          Цена дня берётся у родительской локации.
         </p>
         <ImageIdsPicker
           images={form.images}
@@ -396,6 +413,7 @@ function LocationRow({
           <p className="truncate font-medium">{item.name}</p>
           <p className="text-xs text-text-secondary">
             {kind}
+            {item.price != null ? ` · ${item.price.toLocaleString('ru-RU')} ₽/место` : ''}
             {item.visitDurationMinutes != null
               ? ` · на месте ${item.visitDurationMinutes} мин`
               : ''}

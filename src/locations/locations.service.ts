@@ -50,6 +50,10 @@ export class LocationsService {
       address: dto.address ?? null,
       visitDurationMinutes: dto.visitDurationMinutes ?? null,
       travelFromBaseMinutes: dto.travelFromBaseMinutes ?? null,
+      price:
+        dto.price !== undefined && dto.price !== null
+          ? Number(dto.price).toFixed(2)
+          : null,
       images,
     });
     const saved = await this.locationsRepository.save(location);
@@ -90,6 +94,10 @@ export class LocationsService {
     }
     if (dto.travelFromBaseMinutes !== undefined) {
       location.travelFromBaseMinutes = dto.travelFromBaseMinutes;
+    }
+    if (dto.price !== undefined) {
+      location.price =
+        dto.price === null ? null : Number(dto.price).toFixed(2);
     }
     if (dto.imageIds !== undefined) {
       location.images = await this.resolveImages(dto.imageIds);

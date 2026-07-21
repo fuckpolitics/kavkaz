@@ -708,6 +708,7 @@ async function seed() {
               : loc.name.includes('Грозный') || loc.name.includes('Ингушетия')
                 ? 210
                 : 120,
+        price: loc.price != null ? loc.price.toFixed(2) : null,
       }),
     );
     if (cover) {
@@ -848,7 +849,9 @@ async function seed() {
   );
 
   console.log('\nSeed complete!');
-  console.log('OTP test code: 0000');
+  console.log(
+    'OTP: without SMTP_HOST → test code 0000; with SMTP → real email codes',
+  );
   console.log('Admin: admin@sorvalis.ru or +79001112233');
   console.log('User:  user@sorvalis.ru or +79005556677');
   await dataSource.destroy();

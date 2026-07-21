@@ -152,9 +152,14 @@ function TripDetailContent() {
             <StatusBadge status={trip.status} />
           </div>
         </div>
-        <p className="text-2xl font-bold text-primary">
-          {formatPrice(trip.estimatedPrice)}
-        </p>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-primary">
+            {formatPrice(trip.estimatedPrice)}
+          </p>
+          <p className="text-sm text-text-secondary">
+            за {trip.adults + trip.children || 1} мест
+          </p>
+        </div>
       </div>
 
       {message ? <p className="mb-4 text-sm text-text-secondary">{message}</p> : null}

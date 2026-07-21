@@ -6,6 +6,7 @@ import {
   IsInt,
   IsLatitude,
   IsLongitude,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -71,6 +72,17 @@ export class CreateLocationDto {
   @IsInt()
   @Min(0)
   travelFromBaseMinutes?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Day-trip seat price ₽ / место',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  price?: number | null;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

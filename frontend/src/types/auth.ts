@@ -15,7 +15,8 @@ export interface VerifyOtpDto {
 export interface RequestOtpResponseDto {
   ok: boolean;
   channel: 'email' | 'phone';
-  debugCode: string;
+  /** Present only in OTP test mode */
+  debugCode?: string;
   message: string;
 }
 

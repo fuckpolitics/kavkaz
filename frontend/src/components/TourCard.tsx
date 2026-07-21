@@ -51,6 +51,7 @@ export function TourCard({ tour }: { tour: TourShortDto }) {
           <div className="mt-3 flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold">от {formatPrice(tour.price)}</p>
+              <p className="mt-0.5 text-[11px] text-white/70">за место</p>
               <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-accent">
                 <IconStar size={11} /> 5.0
               </p>

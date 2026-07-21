@@ -22,8 +22,10 @@ import { Modal } from '@/components/Modal';
 import { OtpVerifyForm } from '@/components/OtpVerifyForm';
 import { TourGallery } from '@/components/TourGallery';
 import { TourProgram } from '@/components/TourProgram';
+import { PaxStepper } from '@/components/trip-builder/PaxStepper';
 import { useAuth } from '@/lib/auth-context';
 import { formatPrice } from '@/lib/format';
+import { MAX_GROUP_SEATS, payingSeats } from '@/lib/pricing';
 import type { DestinationShortDto } from '@/types/destination';
 import type { LocationShortDto } from '@/types/location';
 import type { TourDto } from '@/types/tour';
@@ -46,6 +48,8 @@ export default function TourDetailPage() {
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(
     new Set(),
   );
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
 
   async function load() {
     setLoading(true);
@@ -118,13 +122,32 @@ export default function TourDetailPage() {
       .filter((r) => r.locations.length > 0);
   }, [destinations, locations, tourParentIds]);
 
-  const estimated = useMemo(() => {
-    if (!tour) return 0;
-    const extras = tour.extraServices
+  const priceEstimate = useMemo(() => {
+    if (!tour) {
+      return {
+        seats: 1,
+        seatUnit: 0,
+        programTotal: 0,
+        extrasTotal: 0,
+        total: 0,
+      };
+    }
+    const seats = payingSeats(adults, children);
+    const extrasTotal = tour.extraServices
       .filter((e) => selectedExtras.has(e.extraService.id))
       .reduce((sum, e) => sum + e.price, 0);
-    return tour.price + extras;
-  }, [tour, selectedExtras]);
+    const seatUnit = tour.price;
+    const programTotal = seatUnit * seats;
+    return {
+      seats,
+      seatUnit,
+      programTotal,
+      extrasTotal,
+      total: programTotal + extrasTotal,
+    };
+  }, [tour, selectedExtras, adults, children]);
+
+  const overGroupLimit = priceEstimate.seats > MAX_GROUP_SEATS;
 
   function toggleLocation(id: string) {
     if (!tourSublocationIds.has(id)) return;
@@ -169,6 +192,8 @@ export default function TourDetailPage() {
         const res = await bookingsApi.bookFromTour({
           tourId: tour.id,
           ...contact,
+          adults,
+          children,
           locationIds,
           extraServiceIds,
           comment,
@@ -179,6 +204,8 @@ export default function TourDetailPage() {
       }
 
       const trip = await tripsApi.createFromTour(tour.id, {
+        adults,
+        children,
         locationIds,
         extraServiceIds,
       });
@@ -290,9 +317,45 @@ export default function TourDetailPage() {
           <div className="rounded-[24px] border border-border bg-surface p-5 shadow-card">
             <p className="text-sm text-text-secondary">Стоимость</p>
             <p className="mt-1 text-3xl font-bold text-forest">
-              от {formatPrice(estimated)}
+              {formatPrice(priceEstimate.total)}
             </p>
-            <p className="mt-1 text-sm text-text-secondary">за человека</p>
+            <p className="mt-1 text-sm text-text-secondary">
+              {formatPrice(priceEstimate.seatUnit)} / место ×{' '}
+              {priceEstimate.seats}
+              {priceEstimate.extrasTotal > 0
+                ? ` + услуги ${formatPrice(priceEstimate.extrasTotal)}`
+                : ''}
+            </p>
+
+            <div className="mt-5 grid gap-3">
+              <PaxStepper
+                variant="light"
+                label="Взрослые"
+                value={adults}
+                min={1}
+                max={MAX_GROUP_SEATS}
+                onChange={(value) => {
+                  setAdults(value);
+                  setChildren((c) => Math.min(c, Math.max(0, MAX_GROUP_SEATS - value)));
+                }}
+                hint="Цена за каждое место в группе"
+              />
+              <PaxStepper
+                variant="light"
+                label="Дети"
+                value={children}
+                min={0}
+                max={Math.max(0, MAX_GROUP_SEATS - adults)}
+                onChange={setChildren}
+                hint="До 12 лет — тоже место"
+              />
+            </div>
+            {overGroupLimit ? (
+              <p className="mt-3 text-sm text-amber-700">
+                Группа больше {MAX_GROUP_SEATS} человек — менеджер уточнит формат.
+              </p>
+            ) : null}
+
             {actionError ? (
               <p className="mt-3 text-sm text-danger">{actionError}</p>
             ) : null}
@@ -313,7 +376,8 @@ export default function TourDetailPage() {
               </AppButton>
             </div>
             <p className="mt-4 text-xs leading-relaxed text-text-secondary">
-              Заявка без оплаты онлайн — менеджер подтвердит детали и стоимость.
+              Заявка без оплаты онлайн — менеджер подтвердит детали. Входные
+              билеты и канатные дороги оплачиваются отдельно.
             </p>
           </div>
         </aside>
@@ -322,9 +386,11 @@ export default function TourDetailPage() {
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-border bg-surface/95 p-3 backdrop-blur tablet:hidden">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs text-text-secondary">от</p>
+            <p className="truncate text-xs text-text-secondary">
+              {priceEstimate.seats} мест
+            </p>
             <p className="truncate font-semibold text-forest">
-              {formatPrice(estimated)}
+              {formatPrice(priceEstimate.total)}
             </p>
           </div>
           <AppButton

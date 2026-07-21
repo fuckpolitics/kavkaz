@@ -76,6 +76,16 @@ export class Location {
   })
   travelFromBaseMinutes: number | null;
 
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+    comment:
+      'Day-trip seat price from base (Kislovodsk), ₽ per person in group ≤8',
+  })
+  price: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

@@ -11,6 +11,8 @@ export interface LocationShortDto {
   longitude?: number | null;
   visitDurationMinutes?: number | null;
   travelFromBaseMinutes?: number | null;
+  /** Day-trip seat price ₽ / место (null = по запросу) */
+  price?: number | null;
   coverImage: ImageDto | null;
 }
 
@@ -25,6 +27,7 @@ export interface LocationDto {
   address: string | null;
   visitDurationMinutes: number | null;
   travelFromBaseMinutes: number | null;
+  price: number | null;
   images: ImageDto[];
   createdAt: string;
   updatedAt: string;
@@ -45,6 +48,7 @@ export interface CreateLocationDto {
   address?: string;
   visitDurationMinutes?: number | null;
   travelFromBaseMinutes?: number | null;
+  price?: number | null;
   imageIds?: string[];
 }
 

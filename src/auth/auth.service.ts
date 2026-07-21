@@ -1,16 +1,20 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createHash, randomBytes } from 'crypto';
-import { Repository } from 'typeorm';
+import { createHash, randomBytes, randomInt } from 'crypto';
+import { MoreThan, Repository } from 'typeorm';
 import { OtpCode } from '../database/entities/otp-code.entity';
 import { User } from '../database/entities/user.entity';
 import { UserRole } from '../database/enums/user-role.enum';
+import { MailService } from '../mail/mail.service';
+import { SmsService } from '../sms/sms.service';
 import { toUserDto } from '../users/dto/user.dto';
 import { UsersService } from '../users/users.service';
 import { AuthResponseDto, AuthTokensDto } from './dto/auth-response.dto';
@@ -22,8 +26,8 @@ import {
 import { JwtPayload } from './jwt.strategy';
 import { RefreshTokensRepository } from './refresh-tokens.repository';
 
-const TEST_OTP = '0000';
-const OTP_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_OTP_TTL_MS = 10 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 45 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -32,62 +36,124 @@ export class AuthService {
     private readonly refreshTokensRepository: RefreshTokensRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
+    private readonly smsService: SmsService,
     @InjectRepository(OtpCode)
     private readonly otpRepository: Repository<OtpCode>,
   ) {}
 
   async requestOtp(dto: RequestOtpDto): Promise<RequestOtpResponseDto> {
     const { contact, channel } = this.resolveContact(dto);
+    const testMode = this.isChannelTestMode(channel);
+
+    if (!testMode) {
+      if (channel === 'email' && !this.mailService.isConfigured()) {
+        throw new BadRequestException(
+          'Отправка email не настроена. Укажите SMTP или включите OTP_TEST_MODE.',
+        );
+      }
+      if (channel === 'phone' && !this.smsService.isConfigured()) {
+        throw new BadRequestException(
+          'Отправка SMS не настроена. Укажите SMSRU_API_ID или включите OTP_TEST_MODE.',
+        );
+      }
+    }
+
+    const recent = await this.otpRepository.findOne({
+      where: {
+        contact,
+        createdAt: MoreThan(new Date(Date.now() - RESEND_COOLDOWN_MS)),
+      },
+      order: { createdAt: 'DESC' },
+    });
+    if (recent && !recent.consumedAt) {
+      const waitSec = Math.ceil(
+        (recent.createdAt.getTime() + RESEND_COOLDOWN_MS - Date.now()) / 1000,
+      );
+      throw new HttpException(
+        `Подождите ${Math.max(1, waitSec)} сек. перед повторной отправкой`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const code = testMode ? this.getTestOtpCode() : this.generateOtpCode();
+    const ttlMs = this.getOtpTtlMs();
 
     await this.otpRepository.delete({ contact });
-    await this.otpRepository.save(
+    const saved = await this.otpRepository.save(
       this.otpRepository.create({
         contact,
         channel,
-        code: TEST_OTP,
-        expiresAt: new Date(Date.now() + OTP_TTL_MS),
+        code,
+        expiresAt: new Date(Date.now() + ttlMs),
         consumedAt: null,
       }),
     );
 
-    // In production: send SMS/email here. Test mode always uses 0000.
+    if (channel === 'email') {
+      if (!testMode) {
+        try {
+          await this.mailService.sendOtpEmail(contact, code);
+        } catch (err) {
+          await this.otpRepository.delete({ id: saved.id });
+          throw err;
+        }
+      }
+      return {
+        ok: true,
+        channel,
+        debugCode: testMode ? code : undefined,
+        message: testMode
+          ? `Код отправлен на ${contact} (тест: ${code})`
+          : `Код отправлен на ${contact}`,
+      };
+    }
+
+    if (!testMode) {
+      try {
+        await this.smsService.sendOtpSms(contact, code);
+      } catch (err) {
+        await this.otpRepository.delete({ id: saved.id });
+        throw err;
+      }
+    }
+
     return {
       ok: true,
       channel,
-      debugCode: TEST_OTP,
-      message:
-        channel === 'email'
-          ? `Код отправлен на ${contact} (тест: ${TEST_OTP})`
-          : `Код отправлен в SMS на ${contact} (тест: ${TEST_OTP})`,
+      debugCode: testMode ? code : undefined,
+      message: testMode
+        ? `Код отправлен в SMS на ${contact} (тест: ${code})`
+        : `Код отправлен в SMS на ${contact}`,
     };
   }
 
   async verifyOtp(dto: VerifyOtpDto): Promise<AuthResponseDto> {
     const { contact, channel } = this.resolveContact(dto);
-    if (dto.code !== TEST_OTP) {
-      const stored = await this.otpRepository.findOne({
-        where: { contact },
-        order: { createdAt: 'DESC' },
-      });
+    const code = dto.code.trim();
+
+    const stored = await this.otpRepository.findOne({
+      where: { contact },
+      order: { createdAt: 'DESC' },
+    });
+
+    const testBypass =
+      this.isChannelTestMode(channel) && code === this.getTestOtpCode();
+
+    if (!testBypass) {
       if (
         !stored ||
         stored.consumedAt ||
         stored.expiresAt.getTime() < Date.now() ||
-        stored.code !== dto.code
+        stored.code !== code
       ) {
         throw new UnauthorizedException('Неверный или просроченный код');
       }
+    }
+
+    if (stored && !stored.consumedAt) {
       stored.consumedAt = new Date();
       await this.otpRepository.save(stored);
-    } else {
-      const stored = await this.otpRepository.findOne({
-        where: { contact },
-        order: { createdAt: 'DESC' },
-      });
-      if (stored && !stored.consumedAt) {
-        stored.consumedAt = new Date();
-        await this.otpRepository.save(stored);
-      }
     }
 
     let user =
@@ -170,6 +236,42 @@ export class AuthService {
 
   async issueTokensForUser(user: User): Promise<AuthTokensDto> {
     return this.issueTokens(user);
+  }
+
+  /**
+   * Per-channel test mode:
+   * - OTP_TEST_MODE=true → always test codes
+   * - OTP_TEST_MODE=false → real delivery (provider required)
+   * - unset → test for a channel if its provider is not configured
+   */
+  private isChannelTestMode(channel: 'email' | 'phone'): boolean {
+    const flag = this.configService.get<string>('OTP_TEST_MODE')?.trim();
+    if (flag === 'true') return true;
+    if (flag === 'false') return false;
+    return channel === 'email'
+      ? !this.mailService.isConfigured()
+      : !this.smsService.isConfigured();
+  }
+
+  private getTestOtpCode(): string {
+    return (
+      this.configService.get<string>('OTP_TEST_CODE')?.trim() || '0000'
+    );
+  }
+
+  /** 4-digit code (1000–9999), same length as test code 0000 */
+  private generateOtpCode(): string {
+    return String(randomInt(1000, 10000));
+  }
+
+  private getOtpTtlMs(): number {
+    const minutes = Number(
+      this.configService.get<string>('OTP_TTL_MINUTES') ?? '10',
+    );
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      return DEFAULT_OTP_TTL_MS;
+    }
+    return minutes * 60 * 1000;
   }
 
   private resolveContact(dto: { email?: string; phone?: string }): {

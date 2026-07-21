@@ -33,6 +33,12 @@ export class LocationDto {
   @ApiPropertyOptional({ nullable: true })
   travelFromBaseMinutes: number | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Day-trip seat price ₽ / место (group ≤8)',
+  })
+  price: number | null;
+
   @ApiProperty({ type: ImageDto, isArray: true })
   images: ImageDto[];
 
@@ -55,6 +61,7 @@ export function toLocationDto(location: Location): LocationDto {
     address: location.address,
     visitDurationMinutes: location.visitDurationMinutes,
     travelFromBaseMinutes: location.travelFromBaseMinutes,
+    price: location.price != null ? Number(location.price) : null,
     images: (location.images ?? [])
       .map((image) => toImageDto(image))
       .filter((image): image is ImageDto => image !== null),

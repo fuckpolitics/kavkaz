@@ -29,6 +29,11 @@ import {
 import { filterExtrasForLocations } from '@/lib/extra-services';
 import { formatPrice } from '@/lib/format';
 import {
+  estimateBuilderTotal,
+  locationSeatPrice,
+  MAX_GROUP_SEATS,
+} from '@/lib/pricing';
+import {
   estimateDayMinutes,
   estimateRouteMinutes,
   formatDurationMinutes,
@@ -195,6 +200,20 @@ function TripBuilderContent() {
     [availableExtras, selectedExtras],
   );
 
+  const priceEstimate = useMemo(
+    () =>
+      estimateBuilderTotal({
+        daySlots,
+        locations,
+        adults,
+        children,
+        extrasTotal,
+      }),
+    [daySlots, locations, adults, children, extrasTotal],
+  );
+
+  const overGroupLimit = priceEstimate.seats > MAX_GROUP_SEATS;
+
   useEffect(() => {
     const allowed = new Set(availableExtras.map((e) => e.id));
     setSelectedExtras((prev) => {
@@ -319,7 +338,12 @@ function TripBuilderContent() {
       return {
         isRest: false,
         title: `День ${index + 1} · ${parentName}`,
-        locationIds: points.map((p) => p.id),
+        locationIds: [
+          slot.locationId,
+          ...points
+            .map((p) => p.id)
+            .filter((id) => id !== slot.locationId),
+        ],
       };
     });
   }
@@ -524,16 +548,28 @@ function TripBuilderContent() {
                     label="Взрослые"
                     value={adults}
                     min={1}
+                    max={MAX_GROUP_SEATS}
                     onChange={setAdults}
-                    hint="От 1 человека"
+                    hint="Цена считается за каждое место"
                   />
                   <PaxStepper
                     label="Дети"
                     value={children}
                     min={0}
+                    max={Math.max(0, MAX_GROUP_SEATS - adults)}
                     onChange={setChildren}
-                    hint="До 12 лет — уточним кресла у координатора"
+                    hint="До 12 лет — тоже место в группе"
                   />
+                  {overGroupLimit ? (
+                    <p className="text-sm text-amber-200/90">
+                      Группа больше {MAX_GROUP_SEATS} человек — менеджер
+                      уточнит формат и цену.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-white/45">
+                      Мест: {priceEstimate.seats} из {MAX_GROUP_SEATS}
+                    </p>
+                  )}
                 </div>
               ) : null}
 
@@ -554,12 +590,32 @@ function TripBuilderContent() {
                   />
                   {selectedExtras.size > 0 ? (
                     <div className="sticky bottom-20 rounded-[22px] border border-accent/30 bg-ink/90 px-5 py-4 backdrop-blur desktop:bottom-4">
-                      <p className="text-sm text-white/70">
-                        Выбрано услуг: {selectedExtras.size}
-                      </p>
-                      <p className="text-xl font-bold text-accent">
-                        от {formatPrice(extrasTotal)}
-                      </p>
+                      <div className="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                          <p className="text-sm text-white/70">
+                            Услуги · {selectedExtras.size}
+                          </p>
+                          <p className="text-lg font-semibold text-white">
+                            {formatPrice(extrasTotal)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-white/45">
+                            Итого · {priceEstimate.seats} мест
+                          </p>
+                          <p className="text-xl font-bold text-accent">
+                            {priceEstimate.seatUnitTotal > 0 ||
+                            priceEstimate.extrasTotal > 0
+                              ? formatPrice(priceEstimate.total)
+                              : 'по запросу'}
+                          </p>
+                        </div>
+                      </div>
+                      {priceEstimate.unpricedDays > 0 ? (
+                        <p className="mt-2 text-xs text-amber-200/80">
+                          Часть дней без прайса — менеджер уточнит.
+                        </p>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -612,6 +668,13 @@ function TripBuilderContent() {
                             ? 'День отдыха'
                             : parentName ?? 'Локация'}
                         </p>
+                        {slot.kind === 'location' ? (
+                          <p className="mt-1 text-xs text-accent">
+                            {locationSeatPrice(slot.locationId, locations) > 0
+                              ? `${formatPrice(locationSeatPrice(slot.locationId, locations))} / место`
+                              : 'цена по запросу'}
+                          </p>
+                        ) : null}
                         {points.length > 0 ? (
                           <p className="mt-1 text-xs text-white/50">
                             {points.map((p) => p.name).join(' · ')}
@@ -681,11 +744,44 @@ function TripBuilderContent() {
                   {daySlots.filter((s) => s.kind === 'rest').length} отдых
                 </p>
               </div>
+              <div className="rounded-[18px] border border-accent/25 bg-accent/10 px-4 py-3">
+                <p className="text-white/45">Оценка стоимости</p>
+                {priceEstimate.seatUnitTotal > 0 ? (
+                  <p className="mt-1 text-xs text-white/55">
+                    {formatPrice(priceEstimate.seatUnitTotal)} / место ×{' '}
+                    {priceEstimate.seats}
+                    {priceEstimate.extrasTotal > 0
+                      ? ` + услуги ${formatPrice(priceEstimate.extrasTotal)}`
+                      : ''}
+                  </p>
+                ) : priceEstimate.extrasTotal > 0 ? (
+                  <p className="mt-1 text-xs text-white/55">
+                    услуги {formatPrice(priceEstimate.extrasTotal)}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-white/55">
+                    {priceEstimate.unpricedDays > 0
+                      ? 'часть дней — по запросу'
+                      : 'выберите локации'}
+                  </p>
+                )}
+                <p className="mt-1 text-lg font-semibold text-accent">
+                  {priceEstimate.seatUnitTotal > 0 ||
+                  priceEstimate.extrasTotal > 0
+                    ? formatPrice(priceEstimate.total)
+                    : 'по запросу'}
+                </p>
+                {overGroupLimit ? (
+                  <p className="mt-1 text-xs text-amber-200/90">
+                    Группа &gt; {MAX_GROUP_SEATS} — уточним формат
+                  </p>
+                ) : null}
+              </div>
               {selectedExtras.size > 0 ? (
                 <div className="rounded-[18px] border border-white/10 px-4 py-3">
                   <p className="text-white/45">Услуги</p>
                   <p className="font-medium">
-                    {selectedExtras.size} · от {formatPrice(extrasTotal)}
+                    {selectedExtras.size} · {formatPrice(extrasTotal)}
                   </p>
                 </div>
               ) : null}

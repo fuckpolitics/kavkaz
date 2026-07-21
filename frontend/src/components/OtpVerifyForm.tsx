@@ -154,19 +154,23 @@ export function OtpVerifyForm({
             Получить код
           </AppButton>
           <p className="text-xs text-text-secondary">
-            Регистрация не нужна. Для теста код всегда 0000.
+            {channel === 'email'
+              ? 'Код придёт на email. Регистрация и пароль не нужны.'
+              : 'Код придёт в SMS. Регистрация и пароль не нужны.'}
           </p>
         </form>
       ) : (
         <form onSubmit={confirmCode} className="space-y-3">
           {hint ? <p className="text-sm text-text-secondary">{hint}</p> : null}
           <AppInput
-            label="Код из письма или SMS"
+            label={channel === 'email' ? 'Код из письма' : 'Код из SMS'}
             required
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="0000"
+            placeholder="4 цифры"
             inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={8}
           />
           {error ? <p className="text-sm text-danger">{error}</p> : null}
           <AppButton type="submit" className="w-full" loading={loading}>

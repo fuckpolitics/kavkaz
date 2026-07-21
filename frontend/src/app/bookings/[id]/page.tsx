@@ -51,12 +51,14 @@ function BookingDetailContent() {
       </div>
 
       <div className="rounded-card border border-border bg-surface p-5 shadow-card">
-        <p className="text-sm text-text-secondary">Итоговая цена</p>
+        <p className="text-sm text-text-secondary">Оценка стоимости</p>
         <p className="text-3xl font-bold text-primary">
           {formatPrice(booking.totalPrice)}
         </p>
         <p className="mt-2 text-sm text-text-secondary">
-          Взрослые: {booking.adults}, дети: {booking.children}
+          {booking.adults} взр.
+          {booking.children > 0 ? ` · ${booking.children} дет.` : ''} ·{' '}
+          {booking.adults + booking.children || 1} мест
         </p>
         {booking.comment ? (
           <p className="mt-4 text-sm">

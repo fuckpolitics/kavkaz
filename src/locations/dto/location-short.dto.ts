@@ -30,6 +30,12 @@ export class LocationShortDto {
   @ApiPropertyOptional({ nullable: true })
   travelFromBaseMinutes: number | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Day-trip seat price ₽ / место (group ≤8)',
+  })
+  price: number | null;
+
   @ApiPropertyOptional({ type: ImageDto, nullable: true })
   coverImage: ImageDto | null;
 }
@@ -45,6 +51,7 @@ export function toLocationShortDto(location: Location): LocationShortDto {
     longitude: location.longitude,
     visitDurationMinutes: location.visitDurationMinutes,
     travelFromBaseMinutes: location.travelFromBaseMinutes,
+    price: location.price != null ? Number(location.price) : null,
     coverImage: toImageDto(location.images?.[0]),
   };
 }

@@ -5,6 +5,8 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OtpCode } from '../database/entities/otp-code.entity';
 import { RefreshToken } from '../database/entities/refresh-token.entity';
+import { MailModule } from '../mail/mail.module';
+import { SmsModule } from '../sms/sms.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -14,6 +16,8 @@ import { RefreshTokensRepository } from './refresh-tokens.repository';
 @Module({
   imports: [
     UsersModule,
+    MailModule,
+    SmsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
