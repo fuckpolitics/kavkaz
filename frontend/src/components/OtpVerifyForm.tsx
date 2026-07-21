@@ -155,8 +155,8 @@ export function OtpVerifyForm({
           </AppButton>
           <p className="text-xs text-text-secondary">
             {channel === 'email'
-              ? 'Код придёт на email. Регистрация и пароль не нужны.'
-              : 'Код придёт в SMS. Регистрация и пароль не нужны.'}
+              ? 'Код придёт на email. Пока в тесте можно ввести 0000.'
+              : 'Код придёт в SMS. Пока в тесте можно ввести 0000.'}
           </p>
         </form>
       ) : (

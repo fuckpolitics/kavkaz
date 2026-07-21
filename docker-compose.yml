@@ -43,7 +43,7 @@ services:
       DB_LOGGING: ${DB_LOGGING:-false}
       DB_MIGRATIONS_RUN: ${DB_MIGRATIONS_RUN:-false}
       DB_SSL: ${DB_SSL:-false}
-      OTP_TEST_MODE: ${OTP_TEST_MODE:-false}
+      OTP_TEST_MODE: ${OTP_TEST_MODE:-true}
       OTP_TTL_MINUTES: ${OTP_TTL_MINUTES:-10}
       OTP_TEST_CODE: ${OTP_TEST_CODE:-0000}
       SMTP_HOST: ${SMTP_HOST:-}
